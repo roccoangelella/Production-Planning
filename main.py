@@ -204,7 +204,7 @@ def B1_constraint_solver(items,criteria,R,r,L,constraint):
             k_list,sigma_RL_list=multi_item_k_finder(items,criteria,R,r,L)
             val=multi_item_constraint(items,k_list,sigma_RL_list,constraint)
 
-def other_constraint_solver(items,criteria,R,r,L,constraint): #this function must be manually updated with k_list and sigma_RL_list, because mini Python libraries don't allow integrals. However, you just have to check the table and insert k values there.
+def other_constraint_solver(items,criteria,R,r,L,constraint): #this function must be manually updated with k_list and sigma_RL_list, because MicroPython libraries don't allow integrals. However, you just have to check the table and insert k values there.
     # if it possible to choose, just go for B1 # 
     a,sigma_RL_list=multi_item_k_finder(items,criteria,R,r,L)
     k_list=[]
