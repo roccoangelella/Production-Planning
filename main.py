@@ -1,3 +1,5 @@
+import math
+
 def linear_regression(x,y):
     if len(x) != len(y):
         raise ValueError("x and y must have the same length")
@@ -136,8 +138,74 @@ def Winters_method(data_init,data_forecast,p,alpha,beta,gamma):
     print("\nSeasonalities: ",seasonalities)
     print("\nForecasts: ",forecasts)
 
-def S_q_policy():
-    pass
+def multi_item_k_finder(items,criteria,R,r,L): #can be used for single items as well
+    #criteria must be a list filled with 0 unless for the criteria we want to use:
+    #criteria=[B1,B2,B3,P1,P2,TBS]
+    #ex, if we want to use B2, criteria=[0,25,0,0,0,0]   
+    def k_formula(item,sigma_RL,i):
+        B1,B2,B3,P1,P2,TBS=criteria
+        if B1:
+            K=math.sqrt(2*math.log(B1/(math.sqrt(2*math.pi)*R*item['v']*r*sigma_RL)))
+            print(f"Using B1, K_{i} is {K}",)
+            return K
+        if B2:
+            P_u=R*r/B2
+            print(f"Using B2, P_u(K) is {P_u}")
+            
+            return P_u
+        if B3:
+            G_u=((item['Dt']*R)/sigma_RL)*(r/(r+B3))
+            print(f"Using B3, G_u(K) is {G_u}")
+            return G_u
+        if P1:
+            P_u=1-P1
+            print(f"Using P1, P_u(K) is {P_u}")
+            return P_u
+        if P2:
+            G_u_back=((item['Dt']*R)/sigma_RL)*(1-P2)
+            G_u_lost=((item['Dt']*R)/sigma_RL)*(1-P2)/P2
+            print(f"Using P2, P_u(K) is {G_u_back} for backorders and {G_u_lost} for lost sales")
+            return G_u_back,G_u_lost
+        if TBS:
+            P_u=R/TBS
+            print(f"Using TBS, P_u(K) is {P_u}")
+            return P_u
+    k_list=[]
+    sigma_RL_list=[]
+    for i,item in enumerate(items):
+        print(f"--------------Item_{i+1}:---------------")
+        sigma_RL=math.sqrt(R+L)*item['sigma']
+        print(f"Item {i+1} sigma_R+L: {sigma_RL}")
+        sigma_RL_list.append(sigma_RL)
+        k_list.append(k_formula(item,sigma_RL,i+1))
+    return k_list,sigma_RL_list
+
+def multi_item_constraint(items,k_list,sigma_RL_list,constraint):
+    tot=0
+    print('---------Verifying Constraint----------')
+    for i,item in enumerate(items):
+        tot+=k_list[i]*sigma_RL_list[i]*item['v']
+    if constraint*0.98<=tot<=constraint*1.02:
+        print(f'Result:{tot}. Constraint is met!')
+        return 0
+    else:
+        val="lower" if tot>constraint else "higher"
+        print(f"Constraint not met. Result: {tot}.\nUse {val} criteria value")
+        return val
+    
+def B1_constraint_solver(items,criteria,R,r,L,constraint):
+    k_list,sigma_RL_list=multi_item_k_finder(items,criteria,R,r,L)
+    val=multi_item_constraint(items,k_list,sigma_RL_list,constraint)
+    while True:
+        if val==0:
+            break
+        else:
+            if val=='lower':
+                criteria[0]-=criteria[0]*0.10
+            else:
+                criteria[0]+=criteria[0]*0.10
+            k_list,sigma_RL_list=multi_item_k_finder(items,criteria,R,r,L)
+            val=multi_item_constraint(items,k_list,sigma_RL_list,constraint)
 
 #test
 Dt_brown=[130,104,122,143,107,133,125,139,183,172,168,182]
@@ -145,7 +213,10 @@ Dt_holt=[97,118,107,145,141,128,135,216,245,360,400,460]
 Dt_static=[4000,6500,11500,17000,5000,9000,11500,19000,6000,6500,16000,20500]
 Dt_winters=[4800,7400,10500,16000,3900,7500,11000]
 
-def main():
-    Winters_method(Dt_static,Dt_winters,4,alpha=0.2,beta=0.8,gamma=0.1)
+constraint_items=[{'Dt':1200,'v':10,'sigma':35},{'Dt':350,'v':35,'sigma':50},{'Dt':700,'v':17,'sigma':40}]
+criteria=[30,0,0,0,0,0]
+R=0.083
+r=0.12
+L=0.04
 
-main()
+B1_constraint_solver(constraint_items,criteria,R,r,L,1200)
