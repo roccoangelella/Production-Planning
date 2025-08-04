@@ -139,9 +139,6 @@ def Winters_method(data_init,data_forecast,p,alpha,beta,gamma):
     print("\nForecasts: ",forecasts)
 
 def multi_item_k_finder(items,criteria,R,r,L): #can be used for single items as well
-    #criteria must be a list filled with 0 unless for the criteria we want to use:
-    #criteria=[B1,B2,B3,P1,P2,TBS]
-    #ex, if we want to use B2, criteria=[0,25,0,0,0,0]   
     def k_formula(item,sigma_RL,i):
         B1,B2,B3,P1,P2,TBS=criteria
         if B1:
@@ -220,7 +217,12 @@ Dt_static=[4000,6500,11500,17000,5000,9000,11500,19000,6000,6500,16000,20500]
 Dt_winters=[4800,7400,10500,16000,3900,7500,11000]
 
 constraint_items=[{'Dt':1200,'v':10,'sigma':35},{'Dt':350,'v':35,'sigma':50},{'Dt':700,'v':17,'sigma':40}]
+
 criteria=[0,0.03,0,0,0,0]
+#criteria must be a list filled with 0 unless for the criteria we want to use:
+#criteria=[B1,B2,B3,P1,P2,TBS]
+#ex, if we want to use B2, criteria=[0,25,0,0,0,0]  
+
 R=0.083
 r=0.12
 L=0.04
