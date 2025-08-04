@@ -207,6 +207,12 @@ def B1_constraint_solver(items,criteria,R,r,L,constraint):
             k_list,sigma_RL_list=multi_item_k_finder(items,criteria,R,r,L)
             val=multi_item_constraint(items,k_list,sigma_RL_list,constraint)
 
+def other_constraint_solver(items,criteria,R,r,L,constraint): #this function must be manually updated with k_list and sigma_RL_list, because mini Python libraries don't allow integrals. However, you just have to check the table and insert k values there.
+    # if it possible to choose, just go for B1 # 
+    a,sigma_RL_list=multi_item_k_finder(items,criteria,R,r,L)
+    k_list=[]
+    val=multi_item_constraint(items,k_list,sigma_RL_list,constraint)
+
 #test
 Dt_brown=[130,104,122,143,107,133,125,139,183,172,168,182]
 Dt_holt=[97,118,107,145,141,128,135,216,245,360,400,460]
@@ -214,9 +220,9 @@ Dt_static=[4000,6500,11500,17000,5000,9000,11500,19000,6000,6500,16000,20500]
 Dt_winters=[4800,7400,10500,16000,3900,7500,11000]
 
 constraint_items=[{'Dt':1200,'v':10,'sigma':35},{'Dt':350,'v':35,'sigma':50},{'Dt':700,'v':17,'sigma':40}]
-criteria=[30,0,0,0,0,0]
+criteria=[0,0.03,0,0,0,0]
 R=0.083
 r=0.12
 L=0.04
 
-B1_constraint_solver(constraint_items,criteria,R,r,L,1200)
+other_constraint_solver(constraint_items,criteria,R,r,L,1200) 
