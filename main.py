@@ -1,112 +1,110 @@
-import statsmodels.api as sm
-import numpy as np
-import pandas as pd
-import math
+def linear_regression(x,y):
+    if len(x) != len(y):
+        raise ValueError("x and y must have the same length")
 
-def moving_mean(values,p):
+    n = len(x)
+    x_mean = sum(x) / n
+    y_mean = sum(y) / n
+
+    # Calculate numerator and denominator for slope (m)
+    numerator = sum((x[i] - x_mean) * (y[i] - y_mean) for i in range(n))
+    denominator = sum((x[i] - x_mean) ** 2 for i in range(n))
+
+    if denominator == 0:
+        raise ValueError("Cannot compute slope because variance of x is zero")
+
+    slope = numerator / denominator
+    intercept = y_mean - slope * x_mean
+
+    return intercept, slope
+
+def moving_average(values,p):
     means=[]
     for x in range(len(values)): 
             if x<=(len(values)-p):
                 mean=sum(values[x:x+p])/p
-                
                 means.append(mean)
     return means
 
-def regression(X,y):
-    X=np.array(X)
-    X=pd.DataFrame({'Intercept':np.ones(X.shape[0]),'X':X})
-    y=np.array(y)
-
-    model=sm.OLS(y,X.values).fit()  
-    return model
-    
-def get_levels(t,a,b):
-    l_0=a-(2*b)
-    levels=[]
-    for x in range(t):
-        l_t=l_0+(x*b)
-        l_t=f"{l_t:.2f}"
-        levels.append(float(l_t))
-    return levels
-    
-def get_seasonality(Dt,Lt):
-    Lt=Lt[1:]
-    seasonalities=[]
+def static_method(Dt,p):
+    t=[x+1 for x in range(len(Dt))]
+    if p%2==0: #if even p
+        means=moving_average(Dt,p)
+        print('First moving mean: ',means)
+        means=moving_average(means,2)
+        print('Second moving mean: ',means)
+    else: #if odd p
+        means=moving_average(Dt,p)
+        print('Moving mean: ',means)
+    t_means=[x+1 for x in range(len(means))]
+    a,b=linear_regression(t_means,means)
+    T=b
+    L0=a-(2*b)
+    Levels=[L0]
     for x in range(len(Dt)):
-        s=Dt[x]/Lt[x]
-        s=f"{s:.4f}"
-        seasonalities.append(float(s))
-    return seasonalities
+        Lt=L0+((x+1)*T)
+        Levels.append(Lt)
+        
+    Seasonalities=[]
+    for x in range(len(Dt)):
+        St=Dt[x]/Levels[x+1]
+        Seasonalities.append(St)
+    Homologus_Seasonalities=[]
+    for x in range(p):
+        curr=x
+        curr_seasonalities=[]
+        for y in range(len(Seasonalities)//p):
+            try:
+                curr_seasonalities.append(Seasonalities[curr])
+                curr+=(p)
+            except:
+                continue
+        Homologus_Seasonalities.append(curr_seasonalities)
 
-def get_next_seasonality(S):
-    S_next=[[S[0],S[4],S[8]],[S[1],S[5],S[9]],[S[2],S[6],S[10]]] #if needed, add lists of seasonality points to add
-    future_seasonalities=[]
-    for x in range(len(S_next)):
-        f_s=(sum(S_next[x])/len(S_next[x]))
-        f_s=f"{f_s:.4f}"
-        future_seasonalities.append(float(f_s))
-    return future_seasonalities
+    print(f"\nSeasonalities for Homologus intervals: {Homologus_Seasonalities}\n")
 
-def get_forecast(t,Lt,Tt,St):
-    n=4
-    forecasts=[]
-    for x in range(n):
-        f_t1=(Lt[t+x]+Tt[t+x])*St[t+x+1]
-        f_t1=f"{f_t1:.4f}"
-        forecasts.append(float(f_t1))
-    return forecasts
+    for x in range(len(Homologus_Seasonalities)):
+        Seasonalities.append(sum(Homologus_Seasonalities[x])/len(Homologus_Seasonalities[x]))
 
-def static_method(values,p,t):
-    means=moving_mean(values,p)
-    print(f"Media mobile dei valori: {means}\n")
-    if p%2==0: #se p è pari facciamo la media mobile doppia
-        double_moving_mean=moving_mean(means,2)
-        print(f"Doppia media mobile: {double_moving_mean}\n")
-        X=[x for x in range(1,len(double_moving_mean)+1)]
-        model=regression(X,double_moving_mean)
-        print(f"Intercept: {model.params[0]:.2f}\nSlope: {model.params[1]:.2f}")
+    Forecasts=[0 for x in range(len(Dt))]
+    for x in range(1,p+1):
+        ind=len(Dt)+x
+        Ft=(L0+ind*T)*Seasonalities[ind-1]
+        Forecasts.append(Ft)
+    print('Levels:',Levels,'\n')
+    print('Seasonalities: ',Seasonalities,'\n')
+    print('Forecasts: ',Forecasts,'\n')
+    return Levels,Seasonalities,Forecasts,T
 
-    else:      #se p è dispari direttamente la regressione lineare
-        X=[x for x in range(1,len(means)+1)]
-        model=regression(X,means)
-        print(f"Intercept: {model.params[0]:.2f}\nSlope: {model.params[1]:.2f}")
-    
-    levels=get_levels(t,model.params[0],model.params[1])
-    print(f"\nLevels: {levels}")
+def moving_avg_method(Dt,N,init): #init is the n of periods used for initialization
+    Levels=[]
+    curr=-1
+    for x in range(len(Dt)-init+1):
+        avg=sum(Dt[init+curr:(init+curr)-N:-1])/N
+        Levels.append(avg)
+        curr+=1
+    print(f"Levels (and forecasts as well): {Levels}")
 
-    seasonalities=get_seasonality(values,levels)
-    print(f"\nSeasonalities: {seasonalities}")
+def Brown_method(Dt,a,N,init):
+    val=(Dt[init-1:init-N-1:-1])
+    if len(val)==0:
+        val=Dt[0:init]
+    first_avg=sum(val)/N
+    Levels=[first_avg]
+    Forecasts=[0 for x in range(init)]
+    Forecasts.append(int(Levels[0]))
+    for t in range(len(Dt)-1):
+        Lt=(a*Dt[t+init])+(1-a)*Levels[-1]
+        Levels.append(Lt)
+        print(Lt)
+        Forecasts.append(int(Lt))
 
-    new_seasonalities=get_next_seasonality(seasonalities)
-    print(f"Seasonalities from S{len(seasonalities)+1} to S{len(seasonalities)+len(new_seasonalities)}: {new_seasonalities}")
-    for x in new_seasonalities:
-        seasonalities.append(x)
-        print(f"\nNew Seasonalities: {seasonalities}")
-
-
-def record(data,alpha,last_level,l):
-    return (alpha*data[l])+((1-alpha)*last_level)
-
-def Brown_method(data,n): #n is the (given) number of intervals to initialize the method
-    levels=[0 for x in range(n-1)]
-    forecasts=[0 for x in range(n)]
-    last_level=np.average(data[0:n])
-    levels.append(last_level)
-    alpha=0.3
-    for x in range(len(data)-n):
-        forecasts.append(round(levels[-1]))
-        new_level=record(data,alpha,levels[-1],len(levels))
-        levels.append(new_level)
-    print(f"Levels: {Brown_method(Data,6)[0]}")
-    print(f"\nForecasts: {Brown_method(Data,6)[1]}")
-    
 def Holt_method(data,n,alpha,beta):
-    data_1=data[0:5]
-    model=regression([x for x in range(1,len(data_1)+1)],data_1)
-    print(model.params[0])
-    a=round(model.params[0],2)
-    b=round(model.params[1],2)
-    levels=[0 for x in range(n+1)]
+    data_1=data[0:5] #set 0:n_initializing data
+    model=linear_regression([x for x in range(1,len(data_1)+1)],data_1)
+    a=round(model[0],2)
+    b=round(model[1],2)
+    levels=[a+(x*b) for x in range(n+1)]
     levels[0]=a
     last_level=a+(n*b)
     levels.append(last_level)
@@ -124,3 +122,29 @@ def Holt_method(data,n,alpha,beta):
     print(f"\nLevels: {levels}")
     print(f"\nTrends: {trends}")
 
+def Winters_method(data_init,data_forecast,p,alpha,beta,gamma):
+    levels,seasonalities,forecasts,T=static_method(data_init,p)
+    data=data_init+data_forecast
+    trends=[T]
+    for x in range(len(data_init),len(data_init)+len(data_forecast)):
+        forecast=(levels[-1]+trends[-1])*seasonalities[x]
+        forecasts.append(forecast)
+        level=(alpha*(data[x]/seasonalities[x]))+(1-alpha)*(levels[-1]+trends[-1])
+        trend=(beta*(level-levels[-1]))+(1-beta)*trends[-1]
+        seasonality=(gamma*(data[x]/level))+(1-gamma)*seasonalities[x]
+        levels.append(level)
+        trends.append(trend)
+        seasonalities.append(seasonality)
+    print("----------------------------------------------\n")
+    print("Levels: ",levels)
+    print("\nTrends: ",trends)
+    print("\nSeasonalities: ",seasonalities)
+    print("\nForecasts: ",forecasts)
+
+#test
+Dt_brown=[130,104,122,143,107,133,125,139,183,172,168,182]
+Dt_holt=[97,118,107,145,141,128,135,216,245,360,400,460]
+Dt_static=[4000,6500,11500,17000,5000,9000,11500,19000,6000,6500,16000,20500]
+Dt_winters=[4800,7400,10500,16000,3900,7500,11000]
+
+Winters_method(Dt_static,Dt_winters,4,alpha=0.2,beta=0.8,gamma=0.1)
