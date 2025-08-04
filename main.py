@@ -71,10 +71,8 @@ def static_method(Dt,p):
         ind=len(Dt)+x
         Ft=(L0+ind*T)*Seasonalities[ind-1]
         Forecasts.append(Ft)
-    print('Levels:',Levels,'\n')
-    print('Seasonalities: ',Seasonalities,'\n')
-    print('Forecasts: ',Forecasts,'\n')
-    return Levels,Seasonalities,Forecasts,T
+
+    return Levels,Seasonalities,Forecasts,[T]
 
 def moving_avg_method(Dt,N,init): #init is the n of periods used for initialization
     Levels=[]
@@ -83,7 +81,7 @@ def moving_avg_method(Dt,N,init): #init is the n of periods used for initializat
         avg=sum(Dt[init+curr:(init+curr)-N:-1])/N
         Levels.append(avg)
         curr+=1
-    print(f"Levels (and forecasts as well): {Levels}")
+    return Levels
 
 def Brown_method(Dt,a,N,init):
     val=(Dt[init-1:init-N-1:-1])
@@ -98,7 +96,7 @@ def Brown_method(Dt,a,N,init):
         Levels.append(Lt)
         print(Lt)
         Forecasts.append(int(Lt))
-
+    return Levels,Forecasts
 def Holt_method(data,n,alpha,beta):
     data_1=data[0:5] #set 0:n_initializing data
     model=linear_regression([x for x in range(1,len(data_1)+1)],data_1)
@@ -118,14 +116,12 @@ def Holt_method(data,n,alpha,beta):
         new_trend=(beta*(levels[-1]-levels[-2])+(1-beta)*trends[-1])
         trends.append(new_trend)
     forecasts.append(levels[-1]+trends[-1])
-    print(f"Forecasts: {forecasts}")
-    print(f"\nLevels: {levels}")
-    print(f"\nTrends: {trends}")
+
+    return forecasts,levels,trends
 
 def Winters_method(data_init,data_forecast,p,alpha,beta,gamma):
-    levels,seasonalities,forecasts,T=static_method(data_init,p)
+    levels,seasonalities,forecasts,trends=static_method(data_init,p)
     data=data_init+data_forecast
-    trends=[T]
     for x in range(len(data_init),len(data_init)+len(data_forecast)):
         forecast=(levels[-1]+trends[-1])*seasonalities[x]
         forecasts.append(forecast)
@@ -135,11 +131,13 @@ def Winters_method(data_init,data_forecast,p,alpha,beta,gamma):
         levels.append(level)
         trends.append(trend)
         seasonalities.append(seasonality)
-    print("----------------------------------------------\n")
     print("Levels: ",levels)
     print("\nTrends: ",trends)
     print("\nSeasonalities: ",seasonalities)
     print("\nForecasts: ",forecasts)
+
+def S_q_policy():
+    pass
 
 #test
 Dt_brown=[130,104,122,143,107,133,125,139,183,172,168,182]
@@ -147,4 +145,7 @@ Dt_holt=[97,118,107,145,141,128,135,216,245,360,400,460]
 Dt_static=[4000,6500,11500,17000,5000,9000,11500,19000,6000,6500,16000,20500]
 Dt_winters=[4800,7400,10500,16000,3900,7500,11000]
 
-Winters_method(Dt_static,Dt_winters,4,alpha=0.2,beta=0.8,gamma=0.1)
+def main():
+    Winters_method(Dt_static,Dt_winters,4,alpha=0.2,beta=0.8,gamma=0.1)
+
+main()
