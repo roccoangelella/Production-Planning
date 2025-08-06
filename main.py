@@ -138,32 +138,32 @@ def Winters_method(data_init,data_forecast,p,alpha,beta,gamma):
     print("\nSeasonalities: ",seasonalities)
     print("\nForecasts: ",forecasts)
 
-def multi_item_k_finder(items,criteria,R,r,L): #can be used for single items as well
-    def k_formula(item,sigma_RL,i):
+def multi_item_k_finder(items,criteria,R,r,L): # ONLY R,S policy, can be used for single items as well
+    def RS_k_formula(item,sigma_RL,i):
         B1,B2,B3,P1,P2,TBS=criteria
         if B1:
             K=math.sqrt(2*math.log(B1/(math.sqrt(2*math.pi)*R*item['v']*r*sigma_RL)))
             print(f"Using B1, K_{i} is {K}",)
             return K
-        if B2:
+        elif B2:
             P_u=R*r/B2
             print(f"Using B2, P_u(K) is {P_u}")
             
             return P_u
-        if B3:
+        elif B3:
             G_u=((item['Dt']*R)/sigma_RL)*(r/(r+B3))
             print(f"Using B3, G_u(K) is {G_u}")
             return G_u
-        if P1:
+        elif P1:
             P_u=1-P1
             print(f"Using P1, P_u(K) is {P_u}")
             return P_u
-        if P2:
+        elif P2:
             G_u_back=((item['Dt']*R)/sigma_RL)*(1-P2)
             G_u_lost=((item['Dt']*R)/sigma_RL)*(1-P2)/P2
             print(f"Using P2, P_u(K) is {G_u_back} for backorders and {G_u_lost} for lost sales")
             return G_u_back,G_u_lost
-        if TBS:
+        elif TBS:
             P_u=R/TBS
             print(f"Using TBS, P_u(K) is {P_u}")
             return P_u
@@ -174,7 +174,7 @@ def multi_item_k_finder(items,criteria,R,r,L): #can be used for single items as 
         sigma_RL=math.sqrt(R+L)*item['sigma']
         print(f"Item {i+1} sigma_R+L: {sigma_RL}")
         sigma_RL_list.append(sigma_RL)
-        k_list.append(k_formula(item,sigma_RL,i+1))
+        k_list.append(RS_k_formula(item,sigma_RL,i+1))
     return k_list,sigma_RL_list
 
 def multi_item_constraint(items,k_list,sigma_RL_list,constraint):
@@ -210,6 +210,56 @@ def other_constraint_solver(items,criteria,R,r,L,constraint): #this function mus
     k_list=[]
     val=multi_item_constraint(items,k_list,sigma_RL_list,constraint)
 
+def SQ_k_formula(criteria,Q,D,v,sigma_L,r):
+    B1,B2,B3,P1,P2,TBS=criteria
+    if B1:
+        K=math.sqrt(2*math.log(D*B1/(math.sqrt(2*math.pi)*Q*v*r*sigma_L)))
+        print(f"Using B1, K is {K}")
+        return K
+    elif B2:
+        P_u=(Q*r)/(D*B2)
+        print(f"Using B2, P_u(K) is {P_u}")
+        return P_u
+    elif B3:
+        G_u=(Q/sigma_L)*(r/(r+B3))
+        print(f"Using B3, G_u(K) is {G_u}")
+        return G_u
+    elif P1:
+        P_u=1-P1
+        print(f"Using P1, P_u(K) is {P_u}")
+        return P_u
+    elif P2:
+        G_u_back=(Q/sigma_L)*(1-P2)
+        G_u_lost=(Q/sigma_L)*(1-P2)/P2
+        print(f"Using P2, P_u(K) is {G_u_back} for backorders and {G_u_lost} for lost sales")
+        return G_u_back,G_u_lost
+    elif TBS:
+        P_u=Q/(D*TBS)
+        print(f"Using TBS, P_u(K) is {P_u}")
+        return P_u
+
+def sQ_policy(D,A,v,sigma_L,r,L,L_time_unit,criteria):
+    def sQ_values(k):
+        s=round((k*sigma_L)+(D*L))
+        SS=round(s-(D*L))
+        #stockout costs to be calculated by the user, the code solution would not be quicker than computing by hand, which is trivial.
+        ETRC_without_stockout=A*(D/Q)+((Q/2)+SS)*v*r
+        print(f"s: {s}\nSS: {SS}\nETRC (only Cr+Cm): {ETRC_without_stockout}")
+    
+    Q=math.sqrt((2*A*D)/(v*r))
+    if L_time_unit=='months':
+        L/=12
+    if L_time_unit=='days':
+        L/=250
+    
+    #sigma_L=math.sqrt(L)*sigma
+    k=SQ_k_formula(criteria,Q,D,v,sigma_L,r)
+    sQ_values(0.42)
+
+sQ_criteria=[0,0.5,0,0,0,0]
+sQ_policy(450,80,3,50,0.24,3,'months',sQ_criteria)
+
+
 #test
 Dt_brown=[130,104,122,143,107,133,125,139,183,172,168,182]
 Dt_holt=[97,118,107,145,141,128,135,216,245,360,400,460]
@@ -226,5 +276,3 @@ criteria=[0,0.03,0,0,0,0]
 R=0.083
 r=0.12
 L=0.04
-
-other_constraint_solver(constraint_items,criteria,R,r,L,1200) 
